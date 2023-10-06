@@ -27,21 +27,32 @@ import lombok.NoArgsConstructor;
 public class Item {
 
 	@Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
-    @JsonIgnore
-    private Long id;
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @NotNull
-    private int quantity;
+	@NotNull
+	private int quantity;
 
-    @NotNull
-    private BigDecimal subTotal;
+	@NotNull
+	private BigDecimal subTotal;
 
-    @NotNull
-    private Long productId;
-    
-    @ManyToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "items")
-    @JsonIgnore
-    private List<Order> orders;
+	@NotNull
+	private Long productId;
+
+	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "items")
+	@JsonIgnore
+	private List<Order> orders;
+
+	public Item(Long id, @NotNull int quantity, @NotNull BigDecimal subTotal, @NotNull Long productId) {
+		super();
+		this.id = id;
+		this.quantity = quantity;
+		this.subTotal = subTotal;
+		this.productId = productId;
+	}
+
+	public Item updateWith(Item item) {
+		return new Item(this.id, item.quantity, item.subTotal, item.productId);
+	}
 
 }
