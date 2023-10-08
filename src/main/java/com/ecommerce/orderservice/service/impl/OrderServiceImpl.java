@@ -3,6 +3,7 @@ package com.ecommerce.orderservice.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -13,18 +14,15 @@ import org.springframework.stereotype.Service;
 
 import com.ecommerce.orderservice.entity.Item;
 import com.ecommerce.orderservice.entity.Order;
-import com.ecommerce.orderservice.feign.CustomerClient;
-import com.ecommerce.orderservice.feign.ProductClient;
 import com.ecommerce.orderservice.repository.OrderRepository;
 import com.ecommerce.orderservice.service.ItemService;
 import com.ecommerce.orderservice.service.OrderService;
-import com.ecommerce.sharedlibrary.exception.EcommerceException;
-import com.ecommerce.sharedlibrary.exception.NotFoundException;
-import com.ecommerce.sharedlibrary.model.CustomerDto;
-import com.ecommerce.sharedlibrary.model.ItemDto;
-import com.ecommerce.sharedlibrary.model.OrderDto;
-import com.ecommerce.sharedlibrary.model.OrderStatus;
-import com.ecommerce.sharedlibrary.model.ProductDto;
+import com.ecommerce.orderservice.exception.EcommerceException;
+import com.ecommerce.orderservice.model.InventoryDto;
+import com.ecommerce.orderservice.model.ItemDto;
+import com.ecommerce.orderservice.model.OrderDto;
+import com.ecommerce.orderservice.model.OrderStatus;
+import com.ecommerce.orderservice.model.ProductDto;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -41,15 +39,16 @@ public class OrderServiceImpl implements OrderService {
 	private ModelMapper mapper;
 
 	@Autowired
-	private ProductClient productClient;
+	private ProductServiceProxy productServiceProxy;
 
 	@Autowired
-	private CustomerClient customerClient;
+	private InventoryServiceProxy inventoryServiceProxy;
 
 	@Override
 	public List<OrderDto> getAllOrders() {
 		List<OrderDto> orders = new ArrayList<>();
 		orderRepository.findAll().forEach(order -> {
+			
 			orders.add(mapper.map(order, OrderDto.class));
 		});
 		return orders;
@@ -68,7 +67,7 @@ public class OrderServiceImpl implements OrderService {
 		checkProductStockAvailability(orderDto.getItems());
 
 		// Check for customer information
-		checkCustomer(orderDto.getUserId());
+		// checkCustomer(orderDto.getUserId());
 
 		// Create items
 		orderDto = createItems(orderDto);
@@ -85,7 +84,7 @@ public class OrderServiceImpl implements OrderService {
 		checkProductStockAvailability(orderDto.getItems());
 
 		// Check for customer information
-		checkCustomer(orderDto.getUserId());
+		// checkCustomer(orderDto.getUserId());
 
 		Optional<Order> updatedOrder = orderRepository.findById(id).map(existingOrder -> {
 
@@ -153,27 +152,40 @@ public class OrderServiceImpl implements OrderService {
 
 	private void checkProductStockAvailability(List<ItemDto> items) {
 		for (ItemDto item : items) {
-			ProductDto product = productClient.getProductById(item.getProductId());
+			ProductDto product = productServiceProxy.getProductById(item.getProductId());
 			if (product == null || product.getId() == null)
-				throw new NotFoundException("Product with id = " + item.getProductId() + " not found.");
+				throw new EcommerceException("product-not-found",
+						"Product with id = " + item.getProductId() + " not found.", HttpStatus.NOT_FOUND);
 
-			if (product.getAvailability() == 0)
+			int availableStock = 0;
+
+			if (item.getInventoryId() != null) {
+				InventoryDto inventory = inventoryServiceProxy.getInventoryById(item.getInventoryId());
+				availableStock = inventory.getVendorInventory();
+			} else {
+				List<InventoryDto> inventoryList = inventoryServiceProxy.getInventoryByProductId(product.getId());
+				availableStock = inventoryList.stream().map(InventoryDto::getVendorInventory)
+						.collect(Collectors.summingInt(Integer::intValue));
+			}
+
+			if (availableStock == 0)
 				throw new EcommerceException("product-not-available",
 						"Product with id: " + item.getProductId() + " is/are not available in stock.",
 						HttpStatus.NOT_FOUND);
 
-			if (product.getAvailability() < item.getQuantity())
-				throw new EcommerceException("product-not-available", "Only " + product.getAvailability()
+			if (availableStock < item.getQuantity())
+				throw new EcommerceException("product-not-available", "Only " + availableStock
 						+ " units of product - id: " + item.getProductId() + " is/are available.",
 						HttpStatus.NOT_FOUND);
 		}
 	}
 
-	private void checkCustomer(long customerId) {
-		CustomerDto customer = customerClient.getCustomerById(customerId);
-		if (customer == null || customer.getId() == null)
-			throw new NotFoundException("Customer with id = " + customerId + " not found.");
-	}
+	/*
+	 * private void checkCustomer(long customerId) { CustomerDto customer =
+	 * customerClient.getCustomerById(customerId); if (customer == null ||
+	 * customer.getId() == null) throw new NotFoundException("Customer with id = " +
+	 * customerId + " not found."); }
+	 */
 
 	private OrderDto createItems(OrderDto orderDto) {
 		List<ItemDto> savedItems = new ArrayList<>();

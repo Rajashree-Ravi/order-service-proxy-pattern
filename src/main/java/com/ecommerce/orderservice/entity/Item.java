@@ -9,6 +9,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
@@ -39,20 +40,25 @@ public class Item {
 	@NotNull
 	private Long productId;
 
-	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "items")
+	private Long inventoryId;
+
+	@ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@JoinColumn(name = "orderId")
 	@JsonIgnore
 	private List<Order> orders;
 
-	public Item(Long id, @NotNull int quantity, @NotNull BigDecimal subTotal, @NotNull Long productId) {
+	public Item(Long id, @NotNull int quantity, @NotNull BigDecimal subTotal, @NotNull Long productId,
+			Long inventoryId) {
 		super();
 		this.id = id;
 		this.quantity = quantity;
 		this.subTotal = subTotal;
 		this.productId = productId;
+		this.inventoryId = inventoryId;
 	}
 
 	public Item updateWith(Item item) {
-		return new Item(this.id, item.quantity, item.subTotal, item.productId);
+		return new Item(this.id, item.quantity, item.subTotal, item.productId, item.inventoryId);
 	}
 
 }

@@ -2,7 +2,7 @@ package com.ecommerce.orderservice.service;
 
 import java.util.List;
 
-import com.ecommerce.sharedlibrary.model.OrderDto;
+import com.ecommerce.orderservice.model.OrderDto;
 
 public interface OrderService {
 

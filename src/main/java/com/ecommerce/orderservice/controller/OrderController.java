@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.orderservice.service.OrderService;
-import com.ecommerce.sharedlibrary.exception.EcommerceException;
-import com.ecommerce.sharedlibrary.model.OrderDto;
+import com.ecommerce.orderservice.exception.EcommerceException;
+import com.ecommerce.orderservice.model.OrderDto;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

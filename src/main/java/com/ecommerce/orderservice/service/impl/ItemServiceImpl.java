@@ -9,11 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ecommerce.orderservice.entity.Item;
-import com.ecommerce.orderservice.feign.ProductClient;
 import com.ecommerce.orderservice.repository.ItemRepository;
 import com.ecommerce.orderservice.service.ItemService;
-import com.ecommerce.sharedlibrary.model.ItemDto;
-import com.ecommerce.sharedlibrary.model.ProductDto;
+import com.ecommerce.orderservice.model.InventoryDto;
+import com.ecommerce.orderservice.model.ItemDto;
 
 @Service
 public class ItemServiceImpl implements ItemService {
@@ -22,7 +21,7 @@ public class ItemServiceImpl implements ItemService {
 	ItemRepository itemRepository;
 
 	@Autowired
-	ProductClient productClient;
+	InventoryServiceProxy inventoryServiceProxy;
 
 	@Autowired
 	private ModelMapper mapper;
@@ -80,39 +79,103 @@ public class ItemServiceImpl implements ItemService {
 	}
 
 	private void increaseProductStock(ItemDto itemDto) {
-		ProductDto existingProduct = productClient.getProductById(itemDto.getProductId());
-		if (existingProduct != null) {
-			int quantity = existingProduct.getAvailability() + itemDto.getQuantity();
-			existingProduct.setAvailability(quantity);
-			productClient.updateProductById(itemDto.getProductId(), existingProduct);
+		if (itemDto.getInventoryId() != null) {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryById(itemDto.getInventoryId());
+			int quantity = inventoryDto.getVendorInventory() + itemDto.getQuantity();
+			inventoryDto.setVendorInventory(quantity);
+			inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+		} else {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryByProductId(itemDto.getProductId()).get(0);
+			int quantity = inventoryDto.getVendorInventory() + itemDto.getQuantity();
+			inventoryDto.setVendorInventory(quantity);
+			inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+
+			itemDto.setInventoryId(inventoryDto.getId());
+			updateItem(itemDto.getId(), itemDto);
 		}
 	}
 
 	private void increaseProductStock(ItemDto itemDto, int quantity) {
-		ProductDto existingProduct = productClient.getProductById(itemDto.getProductId());
-		if (existingProduct != null) {
-			int quant = existingProduct.getAvailability() + quantity;
-			existingProduct.setAvailability(quant);
-			productClient.updateProductById(itemDto.getProductId(), existingProduct);
+		if (itemDto.getInventoryId() != null) {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryById(itemDto.getInventoryId());
+			int quant = inventoryDto.getVendorInventory() + quantity;
+			inventoryDto.setVendorInventory(quant);
+			inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+		} else {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryByProductId(itemDto.getProductId()).get(0);
+			int quant = inventoryDto.getVendorInventory() + quantity;
+			inventoryDto.setVendorInventory(quant);
+			inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+
+			itemDto.setInventoryId(inventoryDto.getId());
+			updateItem(itemDto.getId(), itemDto);
 		}
 	}
 
 	@Override
 	public void reduceProductStock(ItemDto itemDto) {
-		ProductDto existingProduct = productClient.getProductById(itemDto.getProductId());
-		if (existingProduct != null) {
-			int quantity = existingProduct.getAvailability() - itemDto.getQuantity();
-			existingProduct.setAvailability(quantity);
-			productClient.updateProductById(itemDto.getProductId(), existingProduct);
+		boolean canReduce = false;
+
+		if (itemDto.getInventoryId() != null) {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryById(itemDto.getInventoryId());
+			if (inventoryDto.getVendorInventory() != null
+					&& inventoryDto.getVendorInventory() >= itemDto.getQuantity()) {
+				int quantity = inventoryDto.getVendorInventory() - itemDto.getQuantity();
+				inventoryDto.setVendorInventory(quantity);
+				inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+				canReduce = true;
+			}
+		}
+
+		if (!canReduce) {
+			List<InventoryDto> inventoryList = inventoryServiceProxy.getInventoryByProductId(itemDto.getProductId());
+
+			for (InventoryDto inventoryDto : inventoryList) {
+				if (inventoryDto.getVendorInventory() != null
+						&& inventoryDto.getVendorInventory() >= itemDto.getQuantity()) {
+					int quantity = inventoryDto.getVendorInventory() - itemDto.getQuantity();
+					inventoryDto.setVendorInventory(quantity);
+					inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+
+					itemDto.setInventoryId(inventoryDto.getId());
+					updateItem(itemDto.getId(), itemDto);
+
+					canReduce = true;
+					break;
+				}
+			}
 		}
 	}
 
 	private void reduceProductStock(ItemDto itemDto, int quantity) {
-		ProductDto existingProduct = productClient.getProductById(itemDto.getProductId());
-		if (existingProduct != null) {
-			int quant = existingProduct.getAvailability() - quantity;
-			existingProduct.setAvailability(quant);
-			productClient.updateProductById(itemDto.getProductId(), existingProduct);
+		boolean canReduce = false;
+
+		if (itemDto.getInventoryId() != null) {
+			InventoryDto inventoryDto = inventoryServiceProxy.getInventoryById(itemDto.getInventoryId());
+			if (inventoryDto.getVendorInventory() != null && inventoryDto.getVendorInventory() >= quantity) {
+				int quant = inventoryDto.getVendorInventory() - quantity;
+				inventoryDto.setVendorInventory(quant);
+				inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+				canReduce = true;
+			}
+		}
+
+		if (!canReduce) {
+			List<InventoryDto> inventoryList = inventoryServiceProxy.getInventoryByProductId(itemDto.getProductId());
+
+			for (InventoryDto inventoryDto : inventoryList) {
+				if (inventoryDto.getVendorInventory() != null && inventoryDto.getVendorInventory() >= quantity) {
+					int quant = inventoryDto.getVendorInventory() - quantity;
+					inventoryDto.setVendorInventory(quant);
+					inventoryServiceProxy.updateInventory(inventoryDto.getId(), inventoryDto);
+
+					itemDto.setInventoryId(inventoryDto.getId());
+					updateItem(itemDto.getId(), itemDto);
+
+					canReduce = true;
+					break;
+				}
+			}
 		}
 	}
 

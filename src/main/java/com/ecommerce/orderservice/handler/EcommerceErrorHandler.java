@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import com.ecommerce.sharedlibrary.exception.EcommerceException;
-import com.ecommerce.sharedlibrary.model.ApiErrorResponse;
+import com.ecommerce.orderservice.exception.EcommerceException;
+import com.ecommerce.orderservice.model.ApiErrorResponse;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)

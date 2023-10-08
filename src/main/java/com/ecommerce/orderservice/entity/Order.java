@@ -21,7 +21,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.ecommerce.sharedlibrary.model.OrderStatus;
+import com.ecommerce.orderservice.model.OrderStatus;
 
 @Entity
 @Data
@@ -44,7 +44,7 @@ public class Order {
 	private BigDecimal total;
 
 	@NotEmpty
-	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@ManyToMany(targetEntity = Item.class, mappedBy = "orders", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Item> items;
 
 	@NotNull
