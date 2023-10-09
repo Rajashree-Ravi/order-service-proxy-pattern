@@ -44,7 +44,7 @@ public class Order {
 	private BigDecimal total;
 
 	@NotEmpty
-	@ManyToMany(targetEntity = Item.class, mappedBy = "orders", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Item> items;
 
 	@NotNull

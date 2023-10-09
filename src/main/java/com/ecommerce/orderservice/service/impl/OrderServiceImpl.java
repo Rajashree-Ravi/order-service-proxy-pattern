@@ -48,7 +48,6 @@ public class OrderServiceImpl implements OrderService {
 	public List<OrderDto> getAllOrders() {
 		List<OrderDto> orders = new ArrayList<>();
 		orderRepository.findAll().forEach(order -> {
-			
 			orders.add(mapper.map(order, OrderDto.class));
 		});
 		return orders;
@@ -70,7 +69,12 @@ public class OrderServiceImpl implements OrderService {
 		// checkCustomer(orderDto.getUserId());
 
 		// Create items
-		orderDto = createItems(orderDto);
+		// orderDto = createItems(orderDto);
+		
+		// Reduce the product quantity
+		for (ItemDto itemDto : orderDto.getItems()) {
+			itemService.reduceProductStock(itemDto);
+		}
 
 		Order order = mapper.map(orderDto, Order.class);
 
@@ -187,15 +191,14 @@ public class OrderServiceImpl implements OrderService {
 	 * customerId + " not found."); }
 	 */
 
-	private OrderDto createItems(OrderDto orderDto) {
-		List<ItemDto> savedItems = new ArrayList<>();
-
-		// Create new items added to order
-		for (ItemDto itemDto : orderDto.getItems()) {
-			savedItems.add(itemService.createItem(itemDto));
-		}
-		orderDto.setItems(savedItems);
-
-		return orderDto;
-	}
+	/*
+	 * private OrderDto createItems(OrderDto orderDto) { List<ItemDto> savedItems =
+	 * new ArrayList<>();
+	 * 
+	 * // Create new items added to order for (ItemDto itemDto :
+	 * orderDto.getItems()) { savedItems.add(itemService.createItem(itemDto)); }
+	 * orderDto.setItems(savedItems);
+	 * 
+	 * return orderDto; }
+	 */
 }
